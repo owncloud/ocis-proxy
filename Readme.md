@@ -1,4 +1,4 @@
-# ownCloud Infinite Scale: Bridge
+# ownCloud Infinite Scale: Proxy
 
 [![Build Status](https://cloud.drone.io/api/badges/owncloud/ocis-proxy/status.svg)](https://cloud.drone.io/owncloud/ocis-proxy)
 [![Gitter chat](https://badges.gitter.im/cs3org/reva.svg)](https://gitter.im/cs3org/reva)
