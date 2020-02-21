@@ -347,9 +347,8 @@ github.com/micro/go-micro/v2 v2.0.0 h1:bMx549RwJ9Yuiui8cDVlfYhVNP8I8KBJTMyLthEXp
 github.com/micro/go-micro/v2 v2.0.0/go.mod h1:v7QP5UhKRt37ixjJe8DouWmg0/eE6dltr5h0idJ9BpE=
 github.com/micro/go-micro/v2 v2.0.1-0.20200212105717-d76baf59de2e h1:EXYgiOLVc7zkUCIsAc++GQiOvPRh/gaGl++fqY1807g=
 github.com/micro/go-micro/v2 v2.0.1-0.20200212105717-d76baf59de2e/go.mod h1:CDPVByZzOp1RNrJfNxEGgNOJ11wEw8NoHfADo8M3+LM=
-github.com/micro/go-plugins/micro/router/v2 v2.0.2/go.mod h1:np1S3KLtvI0UoCS+JR2UEiRjoykTjPUuwP0ERSxyKSw=
-github.com/micro/go-plugins/micro/router/v2 v2.0.3-0.20200214122441-491752bf12b1 h1:fE6NggS+hmN+aJCELpWEZ2sdfzsCxdClPeITbAmZaag=
-github.com/micro/go-plugins/micro/router/v2 v2.0.3-0.20200214122441-491752bf12b1/go.mod h1:CEYpq2RMuCDKOm+LZ5Yna74Dc9StZ4eNDR/a5GD6a6I=
+github.com/micro/go-plugins/micro/router/v2 v2.0.3-0.20200221093116-8ed9b03043f0 h1:zzwivZOd4ZJ2ZA3uG64NvcaYVj6/7FT5sBuF1Tm4z2k=
+github.com/micro/go-plugins/micro/router/v2 v2.0.3-0.20200221093116-8ed9b03043f0/go.mod h1:CEYpq2RMuCDKOm+LZ5Yna74Dc9StZ4eNDR/a5GD6a6I=
 github.com/micro/go-plugins/wrapper/trace/opencensus/v2 v2.0.1/go.mod h1:QrkcwcDtIs2hIJpIEhozekyf6Rfz5C36kFI8+zzCpX0=
 github.com/micro/mdns v0.3.0 h1:bYycYe+98AXR3s8Nq5qvt6C573uFTDPIYzJemWON0QE=
 github.com/micro/mdns v0.3.0/go.mod h1:KJ0dW7KmicXU2BV++qkLlmHYcVv7/hHnbtguSWt9Aoc=

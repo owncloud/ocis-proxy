@@ -87,20 +87,6 @@ func Server(opts ...Option) (svc.Service, error) {
 			Request: router.Request{
 				Method: "GET",
 				Host:   "localhost:9200",
-				Path:   "/phoenix/",
-			},
-			ProxyURL: router.URL{
-				Scheme: "http",
-				Host:   "localhost:9100",
-				Path:   "/phoenix/",
-			},
-			Weight: 2.0,
-			Type:   "proxy",
-		},
-		{
-			Request: router.Request{
-				Method: "GET",
-				Host:   "localhost:9200",
 				Path:   "/graph/",
 			},
 			ProxyURL: router.URL{
@@ -131,13 +117,13 @@ func Server(opts ...Option) (svc.Service, error) {
 				Host:   "localhost:9200",
 				Path:   "/",
 			},
-			Response: router.Response{
-				StatusCode: 302,
-				Header: map[string]string{
-					"Location": "http://localhost:9200/phoenix/",
-				},
+			ProxyURL: router.URL{
+				Scheme: "http",
+				Host:   "localhost:9100",
+				Path:   "/",
 			},
-			Weight: 1.0,
+			Weight: 2.0,
+			Type:   "proxy",
 		},
 	}
 
