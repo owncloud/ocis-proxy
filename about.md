@@ -5,4 +5,4 @@ anchor: "about"
 weight: 10
 ---
 
-This service provides an bridge service that routes requests to the correct services.
+This service provides an proxy service that routes requests to the correct services.

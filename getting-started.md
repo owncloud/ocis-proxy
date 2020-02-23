@@ -27,13 +27,13 @@ If you prefer to configure the service with environment variables you can see th
 
 ##### Server
 
-OCIS_BRIDGE_NAME
-: Name of the bridge service. It will be part of the namespace.
+OCIS_PROXY_NAME
+: Name of the proxy service. It will be part of the namespace.
 
-OCIS_BRIDGE_NAMESPACE
-: Namespace of the bridge service.
+OCIS_PROXY_NAMESPACE
+: Namespace of the proxy service.
 
-OCIS_BRIDGE_ADDRESS
+OCIS_PROXY_ADDRESS
 : Endpoint for the http service endpoint.
 
 #### Commandline flags
@@ -42,7 +42,7 @@ If you prefer to configure the service with commandline flags you can see the av
 
 #### Configuration file
 
-So far we support the file formats `JSON` and `YAML`, if you want to get a full example configuration just take a look at [our repository](https://github.com/owncloud/ocis-proxy/tree/master/pkg/config), there you can always see the latest configuration format. These example configurations include all available options and the default values. The configuration file will be automatically loaded if it's placed at `/etc/ocis/bridge.yml`, `${HOME}/.ocis/bridge.yml` or `$(pwd)/config/bridge.yml`.
+So far we support the file formats `JSON` and `YAML`, if you want to get a full example configuration just take a look at [our repository](https://github.com/owncloud/ocis-proxy/tree/master/pkg/config), there you can always see the latest configuration format. These example configurations include all available options and the default values. The configuration file will be automatically loaded if it's placed at `/etc/ocis/proxy.yml`, `${HOME}/.ocis/proxy.yml` or `$(pwd)/config/proxy.yml`.
 
 ### Usage
 
