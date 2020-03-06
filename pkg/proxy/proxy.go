@@ -17,9 +17,9 @@ import (
 // MultiHostReverseProxy extends httputil to support multiple hosts with diffent policies
 type MultiHostReverseProxy struct {
 	httputil.ReverseProxy
-	Directors map[string]map[string]func(req *http.Request)
-	logger    log.Logger
-  propagator: tracecontext.HTTPFormat{},
+	Directors  map[string]map[string]func(req *http.Request)
+	logger     log.Logger
+	propagator tracecontext.HTTPFormat
 }
 
 // NewMultiHostReverseProxy undocummented
