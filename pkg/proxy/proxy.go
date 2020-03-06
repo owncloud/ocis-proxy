@@ -1,6 +1,7 @@
 package proxy
 
 import (
+	"context"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -8,6 +9,9 @@ import (
 
 	"github.com/owncloud/ocis-pkg/v2/log"
 	"github.com/owncloud/ocis-proxy/pkg/config"
+
+	"go.opencensus.io/plugin/ochttp/propagation/tracecontext"
+	"go.opencensus.io/trace"
 )
 
 // initialize a local logger instance
@@ -16,12 +20,16 @@ var logger = log.NewLogger()
 // MultiHostReverseProxy extends httputil to support multiple hosts with diffent policies
 type MultiHostReverseProxy struct {
 	httputil.ReverseProxy
-	Directors map[string]map[string]func(req *http.Request)
+	propagator tracecontext.HTTPFormat
+	Directors  map[string]map[string]func(req *http.Request)
 }
 
 // NewMultiHostReverseProxy undocummented
 func NewMultiHostReverseProxy(conf *config.Config) *MultiHostReverseProxy {
-	reverseProxy := &MultiHostReverseProxy{Directors: make(map[string]map[string]func(req *http.Request))}
+	reverseProxy := &MultiHostReverseProxy{
+		Directors:  make(map[string]map[string]func(req *http.Request)),
+		propagator: tracecontext.HTTPFormat{},
+	}
 
 	for _, policy := range conf.Policies {
 		for _, route := range policy.Routes {
@@ -78,6 +86,10 @@ func (p *MultiHostReverseProxy) ServeHTTP(w http.ResponseWriter, r *http.Request
 	var hit bool
 	policy := "reva"
 
+	ctx, span := trace.StartSpan(context.Background(), r.URL.String())
+	defer span.End()
+	p.propagator.SpanContextToRequest(span.SpanContext(), r)
+
 	if _, ok := p.Directors[policy]; !ok {
 		logger.
 			Error().
@@ -97,5 +109,5 @@ func (p *MultiHostReverseProxy) ServeHTTP(w http.ResponseWriter, r *http.Request
 	}
 
 	// Call upstream ServeHTTP
-	p.ReverseProxy.ServeHTTP(w, r)
+	p.ReverseProxy.ServeHTTP(w, r.WithContext(ctx))
 }
