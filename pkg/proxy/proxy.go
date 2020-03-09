@@ -96,7 +96,6 @@ func (p *MultiHostReverseProxy) AddHost(policy string, target *url.URL, rt confi
 
 func (p *MultiHostReverseProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// TODO need to fetch from the accounts service
-	// TODO use middleware from ocis-pkg instead once it's there
 	var hit bool
 	policy := "reva"
 
