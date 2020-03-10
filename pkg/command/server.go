@@ -31,6 +31,18 @@ func Server(cfg *config.Config) *cli.Command {
 		Usage: "Start integrated server",
 		Flags: flagset.ServerWithConfig(cfg),
 		Before: func(c *cli.Context) error {
+			logger := NewLogger(cfg)
+			if !cfg.Tracing.Enabled {
+				logger.Info().
+					Str("tracing", "disabled").
+					Msg("init")
+			} else {
+				logger.Info().
+					Str("tracing", "enabled").
+					Str("collector", cfg.Tracing.Collector).
+					Msg("init")
+			}
+
 			if cfg.HTTP.Root != "/" {
 				cfg.HTTP.Root = strings.TrimSuffix(cfg.HTTP.Root, "/")
 			}

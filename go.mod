@@ -15,6 +15,9 @@ require (
 	github.com/prometheus/client_golang v1.2.1
 	github.com/restic/calens v0.2.0
 	github.com/spf13/viper v1.6.2
+	github.com/stretchr/testify v1.5.1 // indirect
 	go.opencensus.io v0.22.2
 	golang.org/x/oauth2 v0.0.0-20191202225959-858c2ad4c8b6 // indirect
+	golang.org/x/sys v0.0.0-20200116001909-b77594299b42 // indirect
+	gopkg.in/yaml.v2 v2.2.8 // indirect
 )
