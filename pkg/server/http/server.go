@@ -2,6 +2,8 @@ package http
 
 import (
 	"crypto/tls"
+	"github.com/owncloud/ocis-pkg/oidc"
+	"github.com/owncloud/ocis-proxy/pkg/middleware"
 	"os"
 
 	occrypto "github.com/owncloud/ocis-konnectd/pkg/crypto"
@@ -16,7 +18,7 @@ func Server(opts ...Option) (svc.Service, error) {
 	// GenCert has side effects as it writes 2 files to the binary running location
 	occrypto.GenCert(options.Logger)
 
-	cer, err := tls.LoadX509KeyPair("server.crt", "server.key")
+	cer, err := tls.LoadX509KeyPair("localhost.pem", "localhost-key.pem")
 	if err != nil {
 		options.Logger.Fatal().Err(err).Msg("Could not setup TLS")
 		os.Exit(1)
@@ -24,9 +26,17 @@ func Server(opts ...Option) (svc.Service, error) {
 
 	config := &tls.Config{Certificates: []tls.Certificate{cer}}
 
+	oidcConfig := options.Config.OIDC
+	mw := middleware.OpenIDConnect(
+		oidc.Endpoint(oidcConfig.Endpoint),
+		oidc.Insecure(oidcConfig.Insecure),
+		oidc.Realm(oidcConfig.Realm),
+		oidc.SigningAlgs(oidcConfig.SigningAlgs),
+	)
+
 	service := svc.NewService(
 		svc.Name("web.proxy"),
-		svc.Handler(options.Handler),
+		svc.Handler(mw(options.Handler)),
 		svc.TLSConfig(config),
 		svc.Logger(options.Logger),
 		svc.Namespace(options.Namespace),

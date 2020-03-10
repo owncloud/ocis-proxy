@@ -1,13 +1,12 @@
 package proxy
 
 import (
+	"github.com/owncloud/ocis-pkg/v2/log"
+	"github.com/owncloud/ocis-proxy/pkg/config"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
 	"strings"
-
-	"github.com/owncloud/ocis-pkg/v2/log"
-	"github.com/owncloud/ocis-proxy/pkg/config"
 )
 
 // MultiHostReverseProxy extends httputil to support multiple hosts with diffent policies
@@ -99,7 +98,7 @@ func (p *MultiHostReverseProxy) AddHost(policy string, target *url.URL, rt confi
 func (p *MultiHostReverseProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// TODO need to fetch from the accounts service
 	var hit bool
-	policy := "reva"
+	policy := "oc10"
 
 	if _, ok := p.Directors[policy]; !ok {
 		p.logger.

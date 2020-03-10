@@ -42,11 +42,18 @@ type Policy struct {
 	Routes []Route
 }
 
+type OIDC struct {
+	Endpoint    string
+	Realm       string
+	SigningAlgs []string
+	Insecure    bool
+}
+
 // Route define forwarding routes
 type Route struct {
 	Endpoint    string
 	Backend     string
-	ApacheVHost bool `mapstructure:"apache-vhost"`
+	ApacheVHost bool
 }
 
 // Config combines all available configuration parts.
@@ -58,6 +65,7 @@ type Config struct {
 	Tracing  Tracing
 	Asset    Asset
 	Policies []Policy
+	OIDC     OIDC
 }
 
 // New initializes a new configuration
