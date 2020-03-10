@@ -14,15 +14,16 @@ import (
 	"go.opencensus.io/trace"
 )
 
+// Directors map strings to httputil ReverseProxy Director
+type Directors map[string]func(req *http.Request)
+
 // MultiHostReverseProxy extends httputil to support multiple hosts with diffent policies
 type MultiHostReverseProxy struct {
 	httputil.ReverseProxy
-	Directors map[string]map[string]func(req *http.Request)
-
-	// Used for context across http services. Serializes into the http headers.
+	DirMap     map[string]Directors
 	propagator tracecontext.HTTPFormat
-
-	logger log.Logger
+	logger     log.Logger
+	config     config.Config
 }
 
 // NewMultiHostReverseProxy undocummented
@@ -30,8 +31,9 @@ func NewMultiHostReverseProxy(opts ...Option) *MultiHostReverseProxy {
 	options := newOptions(opts...)
 
 	reverseProxy := &MultiHostReverseProxy{
-		Directors: make(map[string]map[string]func(req *http.Request)),
-		logger:    options.Logger,
+		DirMap: make(map[string]Directors),
+		logger: options.Logger,
+		config: *options.Config,
 	}
 
 	for _, policy := range options.Config.Policies {
@@ -71,10 +73,11 @@ func singleJoiningSlash(a, b string) string {
 // AddHost undocumented
 func (p *MultiHostReverseProxy) AddHost(policy string, target *url.URL, rt config.Route) {
 	targetQuery := target.RawQuery
-	if p.Directors[policy] == nil {
-		p.Directors[policy] = make(map[string]func(req *http.Request))
+	if p.DirMap[policy] == nil {
+		p.DirMap[policy] = make(map[string]func(req *http.Request))
 	}
-	p.Directors[policy][rt.Endpoint] = func(req *http.Request) {
+
+	p.DirMap[policy][rt.Endpoint] = func(req *http.Request) {
 		req.URL.Scheme = target.Scheme
 		req.URL.Host = target.Host
 		if rt.ApacheVHost {
@@ -95,36 +98,36 @@ func (p *MultiHostReverseProxy) AddHost(policy string, target *url.URL, rt confi
 }
 
 func (p *MultiHostReverseProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+
 	// TODO need to fetch from the accounts service
-	var hit bool
+	// ============
 	policy := "reva"
+	// ============
 
-	ctx, span := trace.StartSpan(context.Background(), r.URL.String())
-	defer span.End()
-	p.propagator.SpanContextToRequest(span.SpanContext(), r)
+	ctx := context.Background()
+	var span *trace.Span
 
-	if _, ok := p.Directors[policy]; !ok {
-		p.logger.
-			Error().
-			Msgf("policy %v is not configured", policy)
+	// Start a root span
+	if p.config.Tracing.Enabled {
+		ctx, span = trace.StartSpan(context.Background(), r.URL.String())
+		defer span.End()
+		p.propagator.SpanContextToRequest(span.SpanContext(), r)
 	}
 
-	for k := range p.Directors[policy] {
+	if _, ok := p.DirMap[policy]; !ok {
+		p.logger.Fatal().Msgf("policy %v is not configured", policy)
+	}
+
+	// override default director with root. TODO this is a design flaw, as we need a catch-all director
+	if p.DirMap[policy]["/"] != nil {
+		p.Director = p.DirMap[policy]["/"]
+	}
+
+	for k := range p.DirMap[policy] {
 		if strings.HasPrefix(r.URL.Path, k) && k != "/" {
-			p.Director = p.Directors[policy][k]
-			hit = true
-			p.logger.
-				Debug().
-				Str("policy", policy).
-				Str("prefix", k).
-				Str("path", r.URL.Path).
-				Msg("director found")
+			p.Director = p.DirMap[policy][k]
+			p.logger.Debug().Str("policy", policy).Str("prefix", k).Str("path", r.URL.Path).Msg("director found")
 		}
-	}
-
-	// override default director with root. If any
-	if !hit && p.Directors[policy]["/"] != nil {
-		p.Director = p.Directors[policy]["/"]
 	}
 
 	// Call upstream ServeHTTP
