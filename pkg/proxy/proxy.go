@@ -20,7 +20,8 @@ type Directors map[string]func(req *http.Request)
 // MultiHostReverseProxy extends httputil to support multiple hosts with diffent policies
 type MultiHostReverseProxy struct {
 	httputil.ReverseProxy
-	DirMap     map[string]Directors
+	DirMap map[string]Directors
+
 	propagator tracecontext.HTTPFormat
 	logger     log.Logger
 	config     config.Config
