@@ -42,6 +42,7 @@ type Policy struct {
 	Routes []Route
 }
 
+// OIDC handles authentication related configuration.
 type OIDC struct {
 	Endpoint    string
 	Realm       string

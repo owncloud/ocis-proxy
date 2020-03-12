@@ -12,17 +12,18 @@ import (
 // MultiHostReverseProxy extends httputil to support multiple hosts with diffent policies
 type MultiHostReverseProxy struct {
 	httputil.ReverseProxy
-	Directors map[string]map[string]func(req *http.Request)
-	logger    log.Logger
+	Directors      map[string]map[string]func(req *http.Request)
+	PolicyStrategy PolicyStrategy
+	logger         log.Logger
 }
 
 // NewMultiHostReverseProxy undocummented
 func NewMultiHostReverseProxy(opts ...Option) *MultiHostReverseProxy {
 	options := newOptions(opts...)
-
 	rp := &MultiHostReverseProxy{
-		Directors: make(map[string]map[string]func(req *http.Request)),
-		logger:    options.Logger,
+		Directors:      make(map[string]map[string]func(req *http.Request)),
+		PolicyStrategy: Migration(),
+		logger:         options.Logger,
 	}
 
 	if options.Config.Policies == nil {
@@ -96,9 +97,22 @@ func (p *MultiHostReverseProxy) AddHost(policy string, target *url.URL, rt confi
 }
 
 func (p *MultiHostReverseProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// TODO need to fetch from the accounts service
+	var policy, userId string
+	claims := ocisoidc.FromContext(r.Context())
+
+	if claims != nil {
+		userId = claims.PreferredUsername
+	}
+
+	policy = p.PolicyStrategy.Policy(r.Context(), userId)
+	p.routeWithPolicy(policy, r)
+
+	// Call upstream ServeHTTP
+	p.ReverseProxy.ServeHTTP(w, r)
+}
+
+func (p *MultiHostReverseProxy) routeWithPolicy(policy string, r *http.Request) {
 	var hit bool
-	policy := "oc10"
 
 	if _, ok := p.Directors[policy]; !ok {
 		p.logger.
