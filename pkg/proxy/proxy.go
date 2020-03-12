@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-// MultiHostReverseProxy extends httputil to support multiple hosts with diffent policies
+// MultiHostReverseProxy extends httputil to support multiple hosts with different policies.
 type MultiHostReverseProxy struct {
 	httputil.ReverseProxy
 	Directors      map[string]map[string]func(req *http.Request)
@@ -17,7 +17,7 @@ type MultiHostReverseProxy struct {
 	logger         log.Logger
 }
 
-// NewMultiHostReverseProxy undocummented
+// NewMultiHostReverseProxy undocumented
 func NewMultiHostReverseProxy(opts ...Option) *MultiHostReverseProxy {
 	options := newOptions(opts...)
 	rp := &MultiHostReverseProxy{
