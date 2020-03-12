@@ -97,14 +97,14 @@ func (p *MultiHostReverseProxy) AddHost(policy string, target *url.URL, rt confi
 }
 
 func (p *MultiHostReverseProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	var policy, userId string
+	var policy, userID string
 	claims := ocisoidc.FromContext(r.Context())
 
 	if claims != nil {
-		userId = claims.PreferredUsername
+		userID = claims.PreferredUsername
 	}
 
-	policy = p.PolicyStrategy.Policy(r.Context(), userId)
+	policy = p.PolicyStrategy.Policy(r.Context(), userID)
 	p.routeWithPolicy(policy, r)
 
 	// Call upstream ServeHTTP

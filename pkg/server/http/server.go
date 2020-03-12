@@ -32,6 +32,7 @@ func Server(opts ...Option) (svc.Service, error) {
 		oidc.Insecure(oidcConfig.Insecure),
 		oidc.Realm(oidcConfig.Realm),
 		oidc.SigningAlgs(oidcConfig.SigningAlgs),
+		oidc.Logger(options.Logger),
 	)
 
 	service := svc.NewService(
