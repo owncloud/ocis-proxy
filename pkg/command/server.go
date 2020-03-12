@@ -2,6 +2,7 @@ package command
 
 import (
 	"context"
+	"github.com/spf13/viper"
 	"os"
 	"os/signal"
 	"strings"
@@ -33,6 +34,46 @@ func Server(cfg *config.Config) *cli.Command {
 		Before: func(c *cli.Context) error {
 			if cfg.HTTP.Root != "/" {
 				cfg.HTTP.Root = strings.TrimSuffix(cfg.HTTP.Root, "/")
+			}
+
+			logger := NewLogger(cfg)
+
+			viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+			viper.SetEnvPrefix("PROXY")
+			viper.AutomaticEnv()
+
+			if c.IsSet("config-file") {
+				viper.SetConfigFile(c.String("config-file"))
+			} else {
+				viper.SetConfigName("proxy")
+
+				viper.AddConfigPath("/etc/ocis")
+				viper.AddConfigPath("$HOME/.ocis")
+				viper.AddConfigPath("./config")
+			}
+
+			if err := viper.ReadInConfig(); err != nil {
+				switch err.(type) {
+				case viper.ConfigFileNotFoundError:
+					logger.Info().
+						Msg("Continue without config")
+				case viper.UnsupportedConfigError:
+					logger.Fatal().
+						Err(err).
+						Msg("Unsupported config type")
+				default:
+					logger.Fatal().
+						Err(err).
+						Msg("Failed to read config")
+				}
+			} else {
+				logger.Info().Msgf("Config File: %v", viper.ConfigFileUsed())
+			}
+
+			if err := viper.Unmarshal(&cfg); err != nil {
+				logger.Fatal().
+					Err(err).
+					Msg("Failed to parse config")
 			}
 
 			return nil
