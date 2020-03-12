@@ -2,7 +2,7 @@ package http
 
 import (
 	"crypto/tls"
-	"github.com/owncloud/ocis-pkg/oidc"
+	"github.com/owncloud/ocis-pkg/v2/oidc"
 	"github.com/owncloud/ocis-proxy/pkg/middleware"
 	"os"
 
