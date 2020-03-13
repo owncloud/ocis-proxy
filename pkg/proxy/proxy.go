@@ -2,19 +2,19 @@ package proxy
 
 import (
 	"github.com/owncloud/ocis-pkg/v2/log"
-	"github.com/owncloud/ocis-proxy/pkg/config"
+	ocisoidc "github.com/owncloud/ocis-pkg/v2/oidc"
+	"github.com/owncloud/ocis-proxy/pkg/proxy/policy"
 	"net/http"
 	"net/http/httputil"
-	"net/url"
 	"strings"
 )
 
 // MultiHostReverseProxy extends httputil to support multiple hosts with different policies.
 type MultiHostReverseProxy struct {
 	httputil.ReverseProxy
-	Directors      map[string]map[string]func(req *http.Request)
-	PolicyStrategy PolicyStrategy
-	logger         log.Logger
+	Directors policy.Directors
+	Strategy  policy.Strategy
+	logger    log.Logger
 }
 
 // NewMultiHostReverseProxy undocumented
@@ -26,6 +26,12 @@ func NewMultiHostReverseProxy(opts ...Option) *MultiHostReverseProxy {
 		logger:         options.Logger,
 	}
 
+	l := options.Logger
+
+	directors, err := policy.NewDirectors(options.Config.Policies)
+	if err != nil {
+		l.Fatal().Err(err).Msgf("Could not load policies")
+	}
 	if options.Config.Policies == nil {
 		rp.logger.Info().Str("source", "runtime").Msg("Policies")
 		options.Config.Policies = defaultPolicies()
@@ -44,6 +50,10 @@ func NewMultiHostReverseProxy(opts ...Option) *MultiHostReverseProxy {
 					Msgf("malformed url: %v", route.Backend)
 			}
 
+	reverseProxy := &MultiHostReverseProxy{
+		Directors: directors,
+		Strategy:  policy.Migration(),
+		logger:    l,
 			rp.logger.
 				Debug().
 				Interface("route", route).
@@ -97,21 +107,22 @@ func (p *MultiHostReverseProxy) AddHost(policy string, target *url.URL, rt confi
 }
 
 func (p *MultiHostReverseProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	var policy, userID string
+	var pol policy.Name
+	var userID string
 	claims := ocisoidc.FromContext(r.Context())
 
 	if claims != nil {
 		userID = claims.PreferredUsername
 	}
 
-	policy = p.PolicyStrategy.Policy(r.Context(), userID)
-	p.routeWithPolicy(policy, r)
+	pol = p.Strategy.Policy(r.Context(), userID)
+	p.routeWithPolicy(pol, r)
 
 	// Call upstream ServeHTTP
 	p.ReverseProxy.ServeHTTP(w, r)
 }
 
-func (p *MultiHostReverseProxy) routeWithPolicy(policy string, r *http.Request) {
+func (p *MultiHostReverseProxy) routeWithPolicy(policy policy.Name, r *http.Request) {
 	var hit bool
 
 	if _, ok := p.Directors[policy]; !ok {
@@ -121,14 +132,15 @@ func (p *MultiHostReverseProxy) routeWithPolicy(policy string, r *http.Request) 
 	}
 
 	for k := range p.Directors[policy] {
-		if strings.HasPrefix(r.URL.Path, k) && k != "/" {
+		ep := string(k)
+		if strings.HasPrefix(r.URL.Path, ep) && ep != "/" {
 			p.Director = p.Directors[policy][k]
 			hit = true
 			p.logger.
 				Debug().
-				Str("policy", policy).
-				Str("prefix", k).
-				Str("path", r.URL.Path).
+				Interface("policy", policy).
+				Interface("endpoint", ep).
+				Interface("path", r.URL.Path).
 				Msg("director found")
 		}
 	}

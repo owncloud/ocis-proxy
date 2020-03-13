@@ -1,5 +1,7 @@
 package config
 
+import "github.com/owncloud/ocis-proxy/pkg/proxy/policy"
+
 // Log defines the available logging configuration.
 type Log struct {
 	Level  string
@@ -65,7 +67,7 @@ type Config struct {
 	HTTP     HTTP
 	Tracing  Tracing
 	Asset    Asset
-	Policies []Policy
+	Policies []policy.Policy
 	OIDC     OIDC
 }
 

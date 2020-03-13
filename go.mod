@@ -6,7 +6,6 @@ require (
 	contrib.go.opencensus.io/exporter/jaeger v0.2.0
 	contrib.go.opencensus.io/exporter/ocagent v0.6.0
 	contrib.go.opencensus.io/exporter/zipkin v0.1.1
-	github.com/GoogleCloudPlatform/cloudsql-proxy v0.0.0-20190605020000-c4ba1fdf4d36
 	github.com/coreos/go-oidc v2.1.0+incompatible
 	github.com/golang/protobuf v1.3.4 // indirect
 	github.com/micro/cli/v2 v2.1.2
@@ -16,7 +15,6 @@ require (
 	github.com/openzipkin/zipkin-go v0.2.2
 	github.com/owncloud/ocis-accounts v0.0.0-20200309101757-1c32865f6446
 	github.com/owncloud/ocis-konnectd v0.0.0-20200303180152-937016f63393
-	github.com/owncloud/ocis-pkg v1.3.0
 	github.com/owncloud/ocis-pkg/v2 v2.0.2
 	github.com/prometheus/client_golang v1.2.1
 	github.com/restic/calens v0.2.0
