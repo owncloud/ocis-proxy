@@ -7,6 +7,7 @@ import (
 	"net/http/httputil"
 )
 
+// RequestRewriterFunc is a function which modifies the request
 type RequestRewriterFunc func(r *http.Request) func(r *http.Request)
 
 // MultiHostReverseProxy extends httputil to support multiple hosts with different policies.
@@ -26,7 +27,10 @@ func NewMultiHostReverseProxy(opts ...Option) *MultiHostReverseProxy {
 	}
 
 	l := options.Logger
-	ps := policy.NewStrategy(options.Config.PolicyStrategy)
+	ps, err := policy.NewStrategy(options.Config.PolicyStrategy)
+	if err != nil {
+		l.Fatal().Err(err).Msgf("Could not initialize policy-engine")
+	}
 
 	pr, err := policy.NewPolicyRewriter(options.Config.Policies, ps, l)
 	if err != nil {

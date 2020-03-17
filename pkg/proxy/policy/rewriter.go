@@ -8,23 +8,26 @@ import (
 )
 
 type (
-	Name      string
-	Endpoint  string
+	// Name of a policy
+	Name string
+	// Endpoint of a policy
+	Endpoint string
+	// Directors is a nested map which maps policies to endpoints
 	Directors map[Name]map[Endpoint]func(req *http.Request)
 )
 
+// NewPolicyRewriter returns a function which the proxy can use to rewrite the incoming request. A named policy is selected
+// based on the result of policyStrategy.
 func NewPolicyRewriter(policies []Policy, policyStrategy Strategy, logger log.Logger) (func(r *http.Request) func(r *http.Request), error) {
 	var err error
 	var directors Directors
-	var l log.Logger
+	var strategy = policyStrategy
+	var l = logger
 	directors, err = loadDirectors(policies)
-	l = logger
 
 	if err != nil {
 		return nil, err
 	}
-
-	strategy := policyStrategy
 
 	return func(r *http.Request) func(r *http.Request) {
 		var pol Name

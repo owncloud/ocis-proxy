@@ -90,11 +90,11 @@ func r(m string, target string, body io.Reader) *http.Request {
 	return httptest.NewRequest(m, target, body)
 }
 
-func u(strUrl string) *url.URL {
-	pUrl, err := url.Parse(strUrl)
+func u(strURL string) *url.URL {
+	pURL, err := url.Parse(strURL)
 	if err != nil {
 		log.Fatalf("Error parsing url: %v", err)
 	}
 
-	return pUrl
+	return pURL
 }

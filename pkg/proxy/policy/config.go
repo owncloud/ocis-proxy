@@ -10,11 +10,13 @@ type Policy struct {
 	Routes []Route `mapstructure:"routes"`
 }
 
-type StaticPolicy struct {
+// StaticPolicyConfig defines configuration for the StaticPolicyStrategy
+type StaticPolicyConfig struct {
 	PolicyName Name `mapstructure:"policy_name"`
 }
 
-type PolicyStrategy struct {
+// StrategyConfig is the generic untyped configuration for policy-strategies
+type StrategyConfig struct {
 	Name   string                 `mapstructure:"type"`
 	Config map[string]interface{} `mapstructure:"config"`
 }
