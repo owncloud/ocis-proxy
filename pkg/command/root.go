@@ -1,7 +1,9 @@
 package command
 
 import (
+	"net/url"
 	"os"
+	"reflect"
 	"strings"
 
 	"github.com/micro/cli/v2"
@@ -98,7 +100,15 @@ func ParseConfig(c *cli.Context, cfg *config.Config) error {
 		}
 	}
 
-	if err := viper.Unmarshal(&cfg); err != nil {
+	decOpts := viper.DecodeHook(func(srcT reflect.Type, tgtT reflect.Type, val interface{}) (interface{}, error) {
+		if srcT.Name() == "string" && tgtT.Name() == "URL" {
+			return url.Parse(val.(string))
+		}
+
+		return val, nil
+	})
+
+	if err := viper.Unmarshal(&cfg, decOpts); err != nil {
 		logger.Fatal().
 			Err(err).
 			Msg("Failed to parse config")

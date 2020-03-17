@@ -1,5 +1,7 @@
 package policy
 
+import "net/url"
+
 // Policy enables us to use multiple directors.
 type Policy struct {
 	Name   Name    `mapstructure:"name"`
@@ -9,6 +11,6 @@ type Policy struct {
 // Route define forwarding routes
 type Route struct {
 	Endpoint    Endpoint `mapstructure:"endpoint"`
-	Backend     string   `mapstructure:"backend"`
+	Backend     *url.URL `mapstructure:"backend"`
 	ApacheVHost bool     `mapstructure:"apache-vhost"`
 }

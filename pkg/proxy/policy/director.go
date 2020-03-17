@@ -1,9 +1,7 @@
 package policy
 
 import (
-	"fmt"
 	"net/http"
-	"net/url"
 	"strings"
 )
 
@@ -17,23 +15,24 @@ func NewDirectors(policies []Policy) (Directors, error) {
 	directors := make(Directors)
 	for _, policy := range policies {
 		for _, route := range policy.Routes {
-			uri, err := url.Parse(route.Backend)
-			if err != nil {
-				return nil, fmt.Errorf("malformed url: %v: %w", route.Backend, err)
-			}
-
 			if directors[policy.Name] == nil {
 				directors[policy.Name] = make(map[Endpoint]func(req *http.Request))
 			}
 
-			directors[policy.Name][route.Endpoint] = newDirectorFn(uri, route)
+			dir, err := newDirectorFn(route)
+			if err != nil {
+				return nil, err
+			}
+
+			directors[policy.Name][route.Endpoint] = dir
 		}
 	}
 
 	return directors, nil
 }
 
-func newDirectorFn(target *url.URL, rt Route) func(req *http.Request) {
+func newDirectorFn(rt Route) (func(req *http.Request), error) {
+	target := rt.Backend
 	targetQuery := target.RawQuery
 
 	return func(req *http.Request) {
@@ -53,7 +52,7 @@ func newDirectorFn(target *url.URL, rt Route) func(req *http.Request) {
 			// explicitly disable User-Agent so it's not set to default value
 			req.Header.Set("User-Agent", "")
 		}
-	}
+	}, nil
 }
 
 func singleJoiningSlash(a, b string) string {
