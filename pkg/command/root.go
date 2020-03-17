@@ -66,6 +66,7 @@ func NewLogger(cfg *config.Config) log.Logger {
 	)
 }
 
+
 // ParseConfig loads proxy configuration from Viper known paths.
 func ParseConfig(c *cli.Context, cfg *config.Config) error {
 	logger := NewLogger(cfg)
@@ -105,6 +106,10 @@ func ParseConfig(c *cli.Context, cfg *config.Config) error {
 			return url.Parse(val.(string))
 		}
 
+		if srcT.Name() == "" && tgtT.Name() == "PolicyStrategy" {
+			return val, nil
+		}
+
 		return val, nil
 	})
 
@@ -116,3 +121,4 @@ func ParseConfig(c *cli.Context, cfg *config.Config) error {
 
 	return nil
 }
+

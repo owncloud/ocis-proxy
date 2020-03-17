@@ -3,12 +3,27 @@ package policy
 import (
 	"context"
 	"github.com/micro/go-micro/v2/client/grpc"
+	"github.com/mitchellh/mapstructure"
 	accounts "github.com/owncloud/ocis-accounts/pkg/proto/v0"
 )
 
 // Strategy returns a "routing-policy" for a given user-id
 type Strategy interface {
 	Policy(ctx context.Context, userID string) Name
+}
+
+func NewStrategy(cfg PolicyStrategy) Strategy {
+	if cfg.Name == "migration" {
+		return Migration()
+	}
+
+	if cfg.Name == "static_policy" {
+		sp := &StaticPolicy{}
+		mapstructure.Decode(cfg.Config, sp)
+		return &staticPolicy{name: sp.PolicyName}
+	}
+
+	return nil
 }
 
 // Migration strategy queries the account-service and routes the user to ocis/reva if found.
@@ -31,4 +46,12 @@ func (ms *migrationStrategy) Policy(ctx context.Context, userID string) Name {
 	}
 
 	return "reva"
+}
+
+type staticPolicy struct {
+	name Name
+}
+
+func (ms *staticPolicy) Policy(ctx context.Context, userID string) Name {
+	return ms.name
 }

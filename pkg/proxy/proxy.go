@@ -2,19 +2,18 @@ package proxy
 
 import (
 	"github.com/owncloud/ocis-pkg/v2/log"
-	ocisoidc "github.com/owncloud/ocis-pkg/v2/oidc"
 	"github.com/owncloud/ocis-proxy/pkg/proxy/policy"
 	"net/http"
 	"net/http/httputil"
-	"strings"
 )
+
+type RequestRewriterFunc func(r *http.Request) func(r *http.Request)
 
 // MultiHostReverseProxy extends httputil to support multiple hosts with different policies.
 type MultiHostReverseProxy struct {
 	httputil.ReverseProxy
-	Directors policy.Directors
-	Strategy  policy.Strategy
-	logger    log.Logger
+	logger  log.Logger
+	Rewrite RequestRewriterFunc
 }
 
 // NewMultiHostReverseProxy undocumented
@@ -27,10 +26,11 @@ func NewMultiHostReverseProxy(opts ...Option) *MultiHostReverseProxy {
 	}
 
 	l := options.Logger
+	ps := policy.NewStrategy(options.Config.PolicyStrategy)
 
-	directors, err := policy.NewDirectors(options.Config.Policies)
+	pr, err := policy.NewPolicyRewriter(options.Config.Policies, ps, l)
 	if err != nil {
-		l.Fatal().Err(err).Msgf("Could not load policies")
+		l.Fatal().Err(err).Msgf("Could not initialize policy-engine")
 	}
 	if options.Config.Policies == nil {
 		rp.logger.Info().Str("source", "runtime").Msg("Policies")
@@ -50,10 +50,9 @@ func NewMultiHostReverseProxy(opts ...Option) *MultiHostReverseProxy {
 					Msgf("malformed url: %v", route.Backend)
 			}
 
-	reverseProxy := &MultiHostReverseProxy{
-		Directors: directors,
-		Strategy:  policy.Migration(),
-		logger:    l,
+	return &MultiHostReverseProxy{
+		Rewrite: pr,
+		logger:  l,
 			rp.logger.
 				Debug().
 				Interface("route", route).
@@ -107,132 +106,7 @@ func (p *MultiHostReverseProxy) AddHost(policy string, target *url.URL, rt confi
 }
 
 func (p *MultiHostReverseProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	var pol policy.Name
-	var userID string
-	claims := ocisoidc.FromContext(r.Context())
-
-	if claims != nil {
-		userID = claims.PreferredUsername
-	}
-
-	pol = p.Strategy.Policy(r.Context(), userID)
-	p.routeWithPolicy(pol, r)
-
+	p.Director = p.Rewrite(r)
 	// Call upstream ServeHTTP
 	p.ReverseProxy.ServeHTTP(w, r)
-}
-
-func (p *MultiHostReverseProxy) routeWithPolicy(policy policy.Name, r *http.Request) {
-	var hit bool
-
-	if _, ok := p.Directors[policy]; !ok {
-		p.logger.
-			Error().
-			Msgf("policy %v is not configured", policy)
-	}
-
-	for k := range p.Directors[policy] {
-		ep := string(k)
-		if strings.HasPrefix(r.URL.Path, ep) && ep != "/" {
-			p.Director = p.Directors[policy][k]
-			hit = true
-			p.logger.
-				Debug().
-				Interface("policy", policy).
-				Interface("endpoint", ep).
-				Interface("path", r.URL.Path).
-				Msg("director found")
-		}
-	}
-
-	// override default director with root. If any
-	if !hit && p.Directors[policy]["/"] != nil {
-		p.Director = p.Directors[policy]["/"]
-	}
-
-	// Call upstream ServeHTTP
-	p.ReverseProxy.ServeHTTP(w, r)
-}
-
-func defaultPolicies() []config.Policy {
-	return []config.Policy{
-		config.Policy{
-			Name: "reva",
-			Routes: []config.Route{
-				config.Route{
-					Endpoint: "/",
-					Backend:  "http://localhost:9100",
-				},
-				config.Route{
-					Endpoint: "/.well-known/",
-					Backend:  "http://localhost:9130",
-				},
-				config.Route{
-					Endpoint: "/konnect/",
-					Backend:  "http://localhost:9130",
-				},
-				config.Route{
-					Endpoint: "/signin/",
-					Backend:  "http://localhost:9130",
-				},
-				config.Route{
-					Endpoint: "/ocs/",
-					Backend:  "http://localhost:9140",
-				},
-				config.Route{
-					Endpoint: "/remote.php/",
-					Backend:  "http://localhost:9140",
-				},
-				config.Route{
-					Endpoint: "/dav/",
-					Backend:  "http://localhost:9140",
-				},
-				config.Route{
-					Endpoint: "/webdav/",
-					Backend:  "http://localhost:9140",
-				},
-			},
-		},
-		config.Policy{
-			Name: "oc10",
-			Routes: []config.Route{
-				config.Route{
-					Endpoint: "/",
-					Backend:  "http://localhost:9100",
-				},
-				config.Route{
-					Endpoint: "/.well-known/",
-					Backend:  "http://localhost:9130",
-				},
-				config.Route{
-					Endpoint: "/konnect/",
-					Backend:  "http://localhost:9130",
-				},
-				config.Route{
-					Endpoint: "/signin/",
-					Backend:  "http://localhost:9130",
-				},
-				config.Route{
-					Endpoint:    "/ocs/",
-					Backend:     "https://demo.owncloud.com",
-					ApacheVHost: true,
-				},
-				config.Route{
-					Endpoint:    "/remote.php/",
-					Backend:     "https://demo.owncloud.com",
-					ApacheVHost: true,
-				},
-				config.Route{
-					Endpoint:    "/dav/",
-					Backend:     "https://demo.owncloud.com",
-					ApacheVHost: true,
-				},
-				config.Route{
-					Endpoint:    "/webdav/",
-					Backend:     "https://demo.owncloud.com",
-					ApacheVHost: true,
-				},
-			},
-		},
-	}
 }

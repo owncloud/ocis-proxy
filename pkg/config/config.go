@@ -61,14 +61,15 @@ type Route struct {
 
 // Config combines all available configuration parts.
 type Config struct {
-	File     string
-	Log      Log
-	Debug    Debug
-	HTTP     HTTP
-	Tracing  Tracing
-	Asset    Asset
-	Policies []policy.Policy
-	OIDC     OIDC
+	File           string
+	Log            Log
+	Debug          Debug
+	HTTP           HTTP
+	Tracing        Tracing
+	Asset          Asset
+	Policies       []policy.Policy
+	OIDC           OIDC
+	PolicyStrategy policy.PolicyStrategy
 }
 
 // New initializes a new configuration
