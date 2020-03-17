@@ -2,23 +2,25 @@ package policy
 
 import (
 	"context"
+	log "github.com/owncloud/ocis-pkg/v2/log"
 	"io"
-	"log"
+	log_std "log"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strconv"
 	"testing"
 )
 
-type testCase struct {
+type directorFuncTestCase struct {
 	name          string
 	clientRequest *http.Request
 	config        Route
-	testFunc      func(t *testing.T, tc testCase)
+	testFunc      func(t *testing.T, tc directorFuncTestCase)
 }
 
-func TestNewDirectorFn(t *testing.T) {
-	var tests = []testCase{
+func TestDirectorFunctions(t *testing.T) {
+	var tests = []directorFuncTestCase{
 		{"method_post", r("POST", "https://example.com/foo/", nil), Route{"/foo/", u("http://backend:8080"), false}, testBasicRewrite},
 		{"method_put", r("POST", "https://example.com/foo/", nil), Route{"/foo/", u("http://backend:8080"), false}, testBasicRewrite},
 		{"method_get", r("GET", "https://example.com/foo/", nil), Route{"/foo/", u("http://backend:8080"), false}, testBasicRewrite},
@@ -29,14 +31,14 @@ func TestNewDirectorFn(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			tc := tc
 			tc.testFunc(t, tc)
 		})
 	}
-
 }
 
-func testBasicRewrite(t *testing.T, tc testCase) {
+func testBasicRewrite(t *testing.T, tc directorFuncTestCase) {
 	director, err := newDirectorFn(&tc.config)
 	if err != nil {
 		t.Fatal(err)
@@ -69,7 +71,7 @@ func testBasicRewrite(t *testing.T, tc testCase) {
 
 }
 
-func testVHostRewrite(t *testing.T, tc testCase) {
+func testVHostRewrite(t *testing.T, tc directorFuncTestCase) {
 	director, err := newDirectorFn(&tc.config)
 	if err != nil {
 		t.Fatal(err)
@@ -86,6 +88,77 @@ func testVHostRewrite(t *testing.T, tc testCase) {
 
 }
 
+type rewriterTestCase struct {
+	in  *http.Request
+	exp *url.URL
+}
+
+func TestRewriter(t *testing.T) {
+	policies := []Policy{
+		{
+			Name: "default",
+			Routes: []Route{
+				{
+					Endpoint: "/",
+					Backend:  u("http://localhost:8080"),
+				},
+				{
+					Endpoint: "/service1/",
+					Backend:  u("http://localhost:1111"),
+				},
+				{
+					Endpoint: "/service2/",
+					Backend:  u("http://localhost:2222"),
+				},
+			},
+		},
+	}
+
+	strategy := StaticPolicyStrategy(&StaticPolicyConfig{PolicyName: "default"})
+
+	var rwTests = []rewriterTestCase{
+		{
+			in:  r("GET", "http://localhost:443/hello/world", nil),
+			exp: u("http://localhost:8080/hello/world"),
+		},
+		{
+			in:  r("GET", "http://localhost:443/service1/", nil),
+			exp: u("http://localhost:1111/service1/"),
+		},
+		{
+			in:  r("GET", "http://localhost:443/service1/foo/bar/baz", nil),
+			exp: u("http://localhost:1111/service1/foo/bar/baz"),
+		},
+		{
+			in:  r("GET", "http://localhost:443/service2/system.php", nil),
+			exp: u("http://localhost:2222/service2/system.php"),
+		},
+		{
+			in:  r("GET", "http://localhost:443/service2/system.php?q1=a&q2=b", nil),
+			exp: u("http://localhost:2222/service2/system.php?q1=a&q2=b"),
+		},
+	}
+
+	prw, err := NewPolicyRewriter(policies, strategy, log.NewLogger())
+	if err != nil {
+		t.Error(err)
+	}
+
+	for k := range rwTests {
+		t.Run(strconv.Itoa(k), func(t *testing.T) {
+			t.Parallel()
+			tc := rwTests[k]
+			req := tc.in.Clone(context.Background())
+			prw(req)(req)
+
+			if req.URL.String() != tc.exp.String() {
+				t.Errorf("Expected rewriten url to be %v, got %v", tc.exp.String(), tc.exp.String())
+			}
+		})
+
+	}
+}
+
 func r(m string, target string, body io.Reader) *http.Request {
 	return httptest.NewRequest(m, target, body)
 }
@@ -93,7 +166,7 @@ func r(m string, target string, body io.Reader) *http.Request {
 func u(strURL string) *url.URL {
 	pURL, err := url.Parse(strURL)
 	if err != nil {
-		log.Fatalf("Error parsing url: %v", err)
+		log_std.Fatalf("Error parsing url: %v", err)
 	}
 
 	return pURL
