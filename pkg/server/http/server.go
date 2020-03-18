@@ -2,8 +2,7 @@ package http
 
 import (
 	"crypto/tls"
-	"github.com/owncloud/ocis-pkg/v2/oidc"
-	"github.com/owncloud/ocis-proxy/pkg/middleware"
+	"net/http"
 	"os"
 
 	occrypto "github.com/owncloud/ocis-konnectd/pkg/crypto"
@@ -25,19 +24,8 @@ func Server(opts ...Option) (svc.Service, error) {
 	}
 
 	config := &tls.Config{Certificates: []tls.Certificate{cer}}
-
-	oidcConfig := options.Config.OIDC
-	mw := middleware.OpenIDConnect(
-		oidc.Endpoint(oidcConfig.Endpoint),
-		oidc.Insecure(oidcConfig.Insecure),
-		oidc.Realm(oidcConfig.Realm),
-		oidc.SigningAlgs(oidcConfig.SigningAlgs),
-		oidc.Logger(options.Logger),
-	)
-
 	service := svc.NewService(
 		svc.Name("web.proxy"),
-		svc.Handler(mw(options.Handler)),
 		svc.TLSConfig(config),
 		svc.Logger(options.Logger),
 		svc.Namespace(options.Namespace),
@@ -45,9 +33,22 @@ func Server(opts ...Option) (svc.Service, error) {
 		svc.Address(options.Config.HTTP.Addr),
 		svc.Context(options.Context),
 		svc.Flags(options.Flags...),
+		svc.Handler(applyMiddlewares(
+			options.Handler,
+			options.Middlewares...),
+		),
 	)
 
 	service.Init()
 
 	return service, nil
+}
+
+func applyMiddlewares(h http.Handler, mws ...func(handler http.Handler) http.Handler) http.Handler {
+	var han = h
+	for _, mw := range mws {
+		han = mw(han)
+	}
+
+	return han
 }

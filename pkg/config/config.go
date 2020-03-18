@@ -50,6 +50,7 @@ type OIDC struct {
 	Realm       string
 	SigningAlgs []string
 	Insecure    bool
+	Disabled    bool
 }
 
 // Route define forwarding routes
@@ -69,7 +70,7 @@ type Config struct {
 	Asset          Asset
 	Policies       []policy.Policy
 	OIDC           OIDC
-	PolicyStrategy policy.PolicyStrategy
+	PolicyStrategy policy.StrategyConfig
 }
 
 // New initializes a new configuration

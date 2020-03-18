@@ -2,6 +2,8 @@ package command
 
 import (
 	"context"
+	"github.com/owncloud/ocis-pkg/v2/oidc"
+	"github.com/owncloud/ocis-proxy/pkg/middleware"
 	"os"
 	"os/signal"
 	"strings"
@@ -141,6 +143,7 @@ func Server(cfg *config.Config) *cli.Command {
 			)
 
 			{
+
 				server, err := http.Server(
 					http.Handler(rp),
 					http.Logger(logger),
@@ -150,7 +153,15 @@ func Server(cfg *config.Config) *cli.Command {
 					http.Metrics(metrics),
 					http.Flags(flagset.RootWithConfig(config.New())),
 					http.Flags(flagset.ServerWithConfig(config.New())),
-				)
+					http.Middlewares(
+						middleware.OpenIDConnect(
+							oidc.Endpoint(cfg.OIDC.Endpoint),
+							oidc.Insecure(cfg.OIDC.Insecure),
+							oidc.Realm(cfg.OIDC.Realm),
+							oidc.SigningAlgs(cfg.OIDC.SigningAlgs),
+							oidc.Logger(logger),
+						),
+					))
 
 				if err != nil {
 					logger.Error().
