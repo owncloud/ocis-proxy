@@ -8,6 +8,9 @@
     "signing_algs": [],
     "insecure": false
   },
+  "policy_strategy": {
+    "type": "migration"
+  },
   "policies": [
     {
       "name": "reva",

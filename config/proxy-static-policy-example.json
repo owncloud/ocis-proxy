@@ -1,0 +1,56 @@
+{
+  "HTTP": {
+    "Namespace": "com.owncloud"
+  },
+  "oidc" : {
+    "endpoint": "https://localhost:9200",
+    "realm": "",
+    "signing_algs": [],
+    "insecure": false
+  },
+  "policy_strategy": {
+    "type": "static",
+    "config": {
+      "policy_name": "default"
+    }
+  },
+  "policies": [
+    {
+      "name": "default",
+      "routes": [
+        {
+          "endpoint": "/",
+          "backend": "http://localhost:9100"
+        },
+        {
+          "endpoint": "/.well-known/",
+          "backend": "http://localhost:9130"
+        },
+        {
+          "endpoint": "/konnect/",
+          "backend": "http://localhost:9130"
+        },
+        {
+          "endpoint": "/signin/",
+          "backend": "http://localhost:9130"
+        },
+        {
+          "endpoint": "/ocs/",
+          "backend": "http://localhost:9140"
+        },
+        {
+          "endpoint": "/remote.php/",
+          "backend": "http://localhost:9140"
+        },
+        {
+          "endpoint": "/dav/",
+          "backend": "http://localhost:9140"
+        },
+        {
+          "endpoint": "/webdav/",
+          "backend": "http://localhost:9140"
+        }
+      ]
+    }
+  ]
+}
