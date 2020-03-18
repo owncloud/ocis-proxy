@@ -6,7 +6,8 @@
     "endpoint": "https://localhost:9200",
     "realm": "",
     "signing_algs": [],
-    "insecure": false
+    "insecure": false,
+    "disabled": true
   },
   "policy_strategy": {
     "type": "static",

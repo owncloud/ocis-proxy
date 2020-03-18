@@ -143,6 +143,19 @@ func Server(cfg *config.Config) *cli.Command {
 			)
 
 			{
+				var mwOption http.Option
+				if cfg.OIDC.Disabled {
+					mwOption = http.Middlewares()
+				} else {
+					mwOption = http.Middlewares(
+						middleware.OpenIDConnect(
+							oidc.Endpoint(cfg.OIDC.Endpoint),
+							oidc.Insecure(cfg.OIDC.Insecure),
+							oidc.Realm(cfg.OIDC.Realm),
+							oidc.SigningAlgs(cfg.OIDC.SigningAlgs),
+							oidc.Logger(logger),
+						))
+				}
 
 				server, err := http.Server(
 					http.Handler(rp),
@@ -153,15 +166,8 @@ func Server(cfg *config.Config) *cli.Command {
 					http.Metrics(metrics),
 					http.Flags(flagset.RootWithConfig(config.New())),
 					http.Flags(flagset.ServerWithConfig(config.New())),
-					http.Middlewares(
-						middleware.OpenIDConnect(
-							oidc.Endpoint(cfg.OIDC.Endpoint),
-							oidc.Insecure(cfg.OIDC.Insecure),
-							oidc.Realm(cfg.OIDC.Realm),
-							oidc.SigningAlgs(cfg.OIDC.SigningAlgs),
-							oidc.Logger(logger),
-						),
-					))
+					mwOption,
+				)
 
 				if err != nil {
 					logger.Error().
