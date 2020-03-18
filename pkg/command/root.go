@@ -1,9 +1,8 @@
 package command
 
 import (
-	"net/url"
+	"github.com/owncloud/ocis-proxy/pkg/proxy/policy"
 	"os"
-	"reflect"
 	"strings"
 
 	"github.com/micro/cli/v2"
@@ -66,7 +65,6 @@ func NewLogger(cfg *config.Config) log.Logger {
 	)
 }
 
-
 // ParseConfig loads proxy configuration from Viper known paths.
 func ParseConfig(c *cli.Context, cfg *config.Config) error {
 	logger := NewLogger(cfg)
@@ -101,17 +99,7 @@ func ParseConfig(c *cli.Context, cfg *config.Config) error {
 		}
 	}
 
-	decOpts := viper.DecodeHook(func(srcT reflect.Type, tgtT reflect.Type, val interface{}) (interface{}, error) {
-		if srcT.Name() == "string" && tgtT.Name() == "URL" {
-			return url.Parse(val.(string))
-		}
-
-		if srcT.Name() == "" && tgtT.Name() == "PolicyStrategy" {
-			return val, nil
-		}
-
-		return val, nil
-	})
+	decOpts := viper.DecodeHook(policy.Decoder)
 
 	if err := viper.Unmarshal(&cfg, decOpts); err != nil {
 		logger.Fatal().
@@ -121,4 +109,3 @@ func ParseConfig(c *cli.Context, cfg *config.Config) error {
 
 	return nil
 }
-

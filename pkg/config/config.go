@@ -38,12 +38,6 @@ type Asset struct {
 	Path string
 }
 
-// Policy enables us to use multiple directors.
-type Policy struct {
-	Name   string
-	Routes []Route
-}
-
 // OIDC handles authentication related configuration.
 type OIDC struct {
 	Endpoint    string
@@ -51,13 +45,6 @@ type OIDC struct {
 	SigningAlgs []string
 	Insecure    bool
 	Disabled    bool
-}
-
-// Route define forwarding routes
-type Route struct {
-	Endpoint    string
-	Backend     string
-	ApacheVHost bool
 }
 
 // Config combines all available configuration parts.
