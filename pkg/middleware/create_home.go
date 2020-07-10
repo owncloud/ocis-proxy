@@ -17,6 +17,9 @@ func CreateHome(opts ...Option) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			token := r.Header.Get("x-access-token")
+			if token == "" {
+				return
+			}
 
 			// we need to pass the token to authenticate the CreateHome request.
 			//ctx := tokenpkg.ContextSetToken(r.Context(), token)
