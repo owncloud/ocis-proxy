@@ -114,6 +114,7 @@ func AccountUUID(opts ...Option) func(next http.Handler) http.Handler {
 			// TODO allow lookup by username?
 			// TODO allow lookup by custom claim, eg an id
 
+			fmt.Printf("\n\n%+v\n\n", "before create account")
 			account, status := getAccount(l, claims, opt.AccountsClient)
 			if status != 0 {
 				if status == http.StatusNotFound {
@@ -132,6 +133,7 @@ func AccountUUID(opts ...Option) func(next http.Handler) http.Handler {
 				w.WriteHeader(http.StatusUnauthorized)
 				return
 			}
+			fmt.Printf("\n\n%+v\n\n", "before create account")
 
 			groups := make([]string, len(account.MemberOf))
 			for i := range account.MemberOf {
@@ -146,6 +148,7 @@ func AccountUUID(opts ...Option) func(next http.Handler) http.Handler {
 				return
 			}
 
+			fmt.Printf("\n\n%+v\n\n", roles.Assignments)
 			ctx := contextWithRoles(r.Context(), roles)
 			l.Debug().Interface("claims", claims).Interface("account", account).Msgf("Associated claims with uuid")
 			token, err := mintToken(ctx, account, groups, opt)

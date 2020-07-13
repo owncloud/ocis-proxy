@@ -3,7 +3,7 @@
     "Namespace": "com.owncloud"
   },
   "oidc": {
-    "issuer": "https://localhost:9200",
+    "endpoint": "https://localhost:9200",
     "insecure": true
   },
   "policy_selector": {
