@@ -274,6 +274,8 @@ func loadMiddlewares(ctx context.Context, l log.Logger, cfg *config.Config) alic
 			middleware.OIDCProviderFunc(provider),
 		)
 
+		// rolesMW := middleware.Roles()
+
 		// TODO this won't work with a registry other than mdns. Look into Micro's client initialization.
 		// https://github.com/owncloud/ocis-proxy/issues/38
 		accounts := acc.NewAccountsService("com.owncloud.api.accounts", mclient.DefaultClient)
@@ -299,6 +301,7 @@ func loadMiddlewares(ctx context.Context, l log.Logger, cfg *config.Config) alic
 		)
 
 		return alice.New(middleware.RedirectToHTTPS, oidcMW, uuidMW, chMW)
+		// return alice.New(middleware.RedirectToHTTPS, oidcMW, uuidMW, chMW, rolesMW)
 	}
 
 	return alice.New(middleware.RedirectToHTTPS)

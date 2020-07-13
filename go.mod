@@ -16,7 +16,8 @@ require (
 	github.com/openzipkin/zipkin-go v0.2.2
 	github.com/owncloud/flaex v0.2.0
 	github.com/owncloud/ocis-accounts v0.1.2-0.20200618163128-aa8ae58dd95e
-	github.com/owncloud/ocis-pkg/v2 v2.2.1
+	github.com/owncloud/ocis-pkg/v2 v2.2.2-0.20200527082518-5641fa4a4c8c
+	github.com/owncloud/ocis-settings v0.0.0-20200710105807-9f0c717cf17e // indirect
 	github.com/prometheus/client_golang v1.7.0
 	github.com/restic/calens v0.2.0
 	github.com/spf13/viper v1.7.0
@@ -27,3 +28,7 @@ require (
 )
 
 replace google.golang.org/grpc => google.golang.org/grpc v1.26.0
+
+replace github.com/owncloud/ocis-settings => ../ocis-settings
+
+replace github.com/cs3org/reva => ../../refs/reva

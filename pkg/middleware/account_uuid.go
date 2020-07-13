@@ -6,11 +6,13 @@ import (
 	"net/http"
 	"strings"
 
-	revauser "github.com/cs3org/go-cs3apis/cs3/identity/user/v1beta1"
-	"github.com/cs3org/reva/pkg/token/manager/jwt"
+	proxytoken "github.com/owncloud/ocis-proxy/pkg/middleware/token"
+
+	"github.com/micro/go-micro/v2/client"
 	acc "github.com/owncloud/ocis-accounts/pkg/proto/v0"
 	"github.com/owncloud/ocis-pkg/v2/log"
 	oidc "github.com/owncloud/ocis-pkg/v2/oidc"
+	settingsproto "github.com/owncloud/ocis-settings/pkg/proto/v0"
 )
 
 func getAccount(l log.Logger, claims *oidc.StandardClaims, ac acc.AccountsService) (account *acc.Account, status int) {
@@ -81,21 +83,26 @@ func createAccount(l log.Logger, claims *oidc.StandardClaims, ac acc.AccountsSer
 	return created, 0
 }
 
+func getRoles(ctx context.Context, accID string) (*settingsproto.UserRoleAssignments, error) {
+	rs := settingsproto.NewRoleService("com.owncloud.api.settings", client.DefaultClient)
+	roles, err := rs.ListRoleAssignments(ctx, &settingsproto.ListRoleAssignmentsRequest{
+		Assignment: &settingsproto.RoleAssignmentIdentifier{
+			AccountUuid: accID,
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return roles, nil
+}
+
 // AccountUUID provides a middleware which mints a jwt and adds it to the proxied request based
 // on the oidc-claims
 func AccountUUID(opts ...Option) func(next http.Handler) http.Handler {
 	opt := newOptions(opts...)
 
 	return func(next http.Handler) http.Handler {
-		// TODO: handle error
-		tokenManager, err := jwt.New(map[string]interface{}{
-			"secret":  opt.TokenManagerConfig.JWTSecret,
-			"expires": int64(60),
-		})
-		if err != nil {
-			opt.Logger.Fatal().Err(err).Msgf("Could not initialize token-manager")
-		}
-
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			l := opt.Logger
 			claims := oidc.FromContext(r.Context())
@@ -132,21 +139,19 @@ func AccountUUID(opts ...Option) func(next http.Handler) http.Handler {
 				groups[i] = account.MemberOf[i].OnPremisesSamAccountName
 			}
 
-			l.Debug().Interface("claims", claims).Interface("account", account).Msgf("Associated claims with uuid")
-			token, err := tokenManager.MintToken(r.Context(), &revauser.User{
-				Id: &revauser.UserId{
-					OpaqueId: account.Id,
-				},
-				Username:     account.OnPremisesSamAccountName,
-				DisplayName:  account.DisplayName,
-				Mail:         account.Mail,
-				MailVerified: account.ExternalUserState == "" || account.ExternalUserState == "Accepted",
-				Groups:       groups,
-			})
-
+			roles, err := getRoles(r.Context(), account.Id)
 			if err != nil {
-				l.Error().Err(err).Msgf("Could not mint token")
-				w.WriteHeader(http.StatusInternalServerError)
+				l.Debug().Interface("account", account).Msg("account is disabled")
+				w.WriteHeader(http.StatusUnauthorized)
+				return
+			}
+
+			ctx := contextWithRoles(r.Context(), roles)
+			l.Debug().Interface("claims", claims).Interface("account", account).Msgf("Associated claims with uuid")
+			token, err := mintToken(ctx, account, groups, opt)
+			if err != nil {
+				l.Debug().Str("minting", "account_uuid Middleware").Msgf("%v", err.Error())
+				w.WriteHeader(http.StatusUnauthorized)
 				return
 			}
 
@@ -154,4 +159,26 @@ func AccountUUID(opts ...Option) func(next http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 		})
 	}
+}
+
+func contextWithRoles(c context.Context, roles *settingsproto.UserRoleAssignments) context.Context {
+	var r []string
+	for _, assignment := range roles.Assignments {
+		r = append(r, assignment.Role)
+	}
+	return context.WithValue(c, proxytoken.RolesKey{}, r)
+}
+
+func mintToken(ctx context.Context, account *acc.Account, groups []string, opts Options) (string, error) {
+	i := proxytoken.Info{
+		Account: account,
+		Groups:  groups,
+	}
+	token, err := i.MintRevaFromInfo(ctx, opts.TokenManagerConfig.JWTSecret)
+
+	if err != nil {
+		return "", fmt.Errorf("could not mint token: %v", err.Error())
+	}
+
+	return token, nil
 }
