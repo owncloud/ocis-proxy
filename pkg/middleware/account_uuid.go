@@ -6,7 +6,8 @@ import (
 	"net/http"
 	"strings"
 
-	proxytoken "github.com/owncloud/ocis-proxy/pkg/middleware/token"
+	"github.com/cs3org/reva/pkg/token/manager/jwt"
+	ptoken "github.com/owncloud/ocis-proxy/pkg/middleware/token"
 
 	"github.com/micro/go-micro/v2/client"
 	acc "github.com/owncloud/ocis-accounts/pkg/proto/v0"
@@ -114,7 +115,6 @@ func AccountUUID(opts ...Option) func(next http.Handler) http.Handler {
 			// TODO allow lookup by username?
 			// TODO allow lookup by custom claim, eg an id
 
-			fmt.Printf("\n\n%+v\n\n", "before create account")
 			account, status := getAccount(l, claims, opt.AccountsClient)
 			if status != 0 {
 				if status == http.StatusNotFound {
@@ -133,7 +133,6 @@ func AccountUUID(opts ...Option) func(next http.Handler) http.Handler {
 				w.WriteHeader(http.StatusUnauthorized)
 				return
 			}
-			fmt.Printf("\n\n%+v\n\n", "before create account")
 
 			groups := make([]string, len(account.MemberOf))
 			for i := range account.MemberOf {
@@ -148,7 +147,9 @@ func AccountUUID(opts ...Option) func(next http.Handler) http.Handler {
 				return
 			}
 
-			fmt.Printf("\n\n%+v\n\n", roles.Assignments)
+			// TODO: this requires an explanation. A PR against Reva is pending to check whether
+			// or not we opt for this implementation. This adds the roles to the context serialized
+			// as []string and reva will check if it is present, if so, will add `roles` to the list of claims.
 			ctx := contextWithRoles(r.Context(), roles)
 			l.Debug().Interface("claims", claims).Interface("account", account).Msgf("Associated claims with uuid")
 			token, err := mintToken(ctx, account, groups, opt)
@@ -158,6 +159,7 @@ func AccountUUID(opts ...Option) func(next http.Handler) http.Handler {
 				return
 			}
 
+			fmt.Printf("\n\nACCESS TOKEN:\n%v", token)
 			r.Header.Set("x-access-token", token)
 			next.ServeHTTP(w, r)
 		})
@@ -169,11 +171,11 @@ func contextWithRoles(c context.Context, roles *settingsproto.UserRoleAssignment
 	for _, assignment := range roles.Assignments {
 		r = append(r, assignment.Role)
 	}
-	return context.WithValue(c, proxytoken.RolesKey{}, r)
+	return context.WithValue(c, jwt.RolesKey{}, r)
 }
 
 func mintToken(ctx context.Context, account *acc.Account, groups []string, opts Options) (string, error) {
-	i := proxytoken.Info{
+	i := ptoken.Info{
 		Account: account,
 		Groups:  groups,
 	}

@@ -9,11 +9,6 @@ import (
 	acc "github.com/owncloud/ocis-accounts/pkg/proto/v0"
 )
 
-// RolesKey stores roles on a context.
-// TODO(refs): should be moved onto reva, consumers should depend on the library,
-// not the other way around.
-type RolesKey struct{}
-
 // Info encapsulates ocis accounts related data.
 type Info struct {
 	Account *acc.Account
