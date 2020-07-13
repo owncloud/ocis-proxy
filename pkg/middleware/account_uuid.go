@@ -159,7 +159,7 @@ func AccountUUID(opts ...Option) func(next http.Handler) http.Handler {
 				return
 			}
 
-			fmt.Printf("\n\nACCESS TOKEN:\n%v", token)
+			l.Debug().Str("access-token", token).Msg("access token contents")
 			r.Header.Set("x-access-token", token)
 			next.ServeHTTP(w, r)
 		})
