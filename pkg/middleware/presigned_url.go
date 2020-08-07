@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/owncloud/ocis-pkg/v2/log"
-	ocisoidc "github.com/owncloud/ocis-pkg/v2/oidc"
 	storepb "github.com/owncloud/ocis-store/pkg/proto/v0"
 	"golang.org/x/crypto/pbkdf2"
 )
@@ -23,14 +22,9 @@ func PresignedURL(opts ...Option) func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if isSignedRequest(r) {
 				if signedRequestIsValid(l, r, opt.Store) {
-					// use openid claims to let the account_uuid middleware do a lookup by username
-					claims := ocisoidc.StandardClaims{
-						PreferredUsername: r.URL.Query().Get("OC-Credential"),
-					}
-
-					// inject claims to the request context for the account_uuid middleware
-					ctxWithClaims := ocisoidc.NewContext(r.Context(), &claims)
-					r = r.WithContext(ctxWithClaims)
+					ctx := r.Context()
+					ctx = context.WithValue(ctx, ctxAccountIdQuery{}, r.URL.Query().Get("OC-Credential"))
+					r = r.WithContext(ctx)
 
 					next.ServeHTTP(w, r)
 				} else {
