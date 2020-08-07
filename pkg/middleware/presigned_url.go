@@ -22,10 +22,7 @@ func PresignedURL(opts ...Option) func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if isSignedRequest(r) {
 				if signedRequestIsValid(l, r, opt.Store) {
-					ctx := r.Context()
-					ctx = context.WithValue(ctx, ctxAccountIdQuery{}, r.URL.Query().Get("OC-Credential"))
-					r = r.WithContext(ctx)
-
+					// let it go through
 					next.ServeHTTP(w, r)
 				} else {
 					http.Error(w, "Invalid url signature", http.StatusUnauthorized)

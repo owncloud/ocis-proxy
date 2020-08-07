@@ -13,8 +13,6 @@ import (
 	oidc "github.com/owncloud/ocis-pkg/v2/oidc"
 )
 
-type ctxAccountIdQuery struct{}
-
 func getAccount(l log.Logger, ac acc.AccountsService, query string) (account *acc.Account, status int) {
 	entry, err := svcCache.Get(AccountsKey, query)
 	if err != nil {
@@ -103,88 +101,68 @@ func AccountUUID(opts ...Option) func(next http.Handler) http.Handler {
 
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			l := opt.Logger
+			claims := oidc.FromContext(r.Context())
+			if claims == nil {
+				next.ServeHTTP(w, r)
+				return
+			}
 
 			var account *acc.Account
 			var status int
-
-			ctx := r.Context()
-			accountIdToQuery := ctx.Value(ctxAccountIdQuery{}).(string)
-
-			if accountIdToQuery != "" {
-				account, status := getAccount(l, opt.AccountsClient, fmt.Sprintf("id eq '%s'", strings.ReplaceAll(accountIdToQuery, "'", "''")))
-				if status != 0 || account == nil {
-					w.WriteHeader(status)
-					return
-				}
-
-				if !account.AccountEnabled {
-					l.Debug().Interface("account", account).Msg("account is disabled")
-					w.WriteHeader(http.StatusUnauthorized)
-					return
-				}
+			if claims.Email != "" {
+				account, status = getAccount(l, opt.AccountsClient, fmt.Sprintf("mail eq '%s'", strings.ReplaceAll(claims.Email, "'", "''")))
+			} else if claims.PreferredUsername != "" {
+				account, status = getAccount(l, opt.AccountsClient, fmt.Sprintf("preferred_name eq '%s'", strings.ReplaceAll(claims.PreferredUsername, "'", "''")))
+			} else {
+				// TODO allow lookup by custom claim, eg an id ... or sub
+				l.Error().Err(err).Msgf("Could not lookup account, no mail or preferred_username claim set")
+				w.WriteHeader(http.StatusInternalServerError)
 			}
-
-			if account == nil {
-				claims := oidc.FromContext(r.Context())
-				if claims == nil {
-					next.ServeHTTP(w, r)
-					return
-				}
-
-				if claims.Email != "" {
-					account, status = getAccount(l, opt.AccountsClient, fmt.Sprintf("mail eq '%s'", strings.ReplaceAll(claims.Email, "'", "''")))
-				} else if claims.PreferredUsername != "" {
-					account, status = getAccount(l, opt.AccountsClient, fmt.Sprintf("preferred_name eq '%s'", strings.ReplaceAll(claims.PreferredUsername, "'", "''")))
-				} else {
-					// TODO allow lookup by custom claim, eg an id ... or sub
-					l.Error().Err(err).Msgf("Could not lookup account, no mail or preferred_username claim set")
-					w.WriteHeader(http.StatusInternalServerError)
-				}
-				if status != 0 || account == nil {
-					if status == http.StatusNotFound {
-						account, status = createAccount(l, claims, opt.AccountsClient)
-						if status != 0 {
-							w.WriteHeader(status)
-							return
-						}
-					} else {
+			if status != 0 || account == nil {
+				if status == http.StatusNotFound {
+					account, status = createAccount(l, claims, opt.AccountsClient)
+					if status != 0 {
 						w.WriteHeader(status)
 						return
 					}
-				}
-				if !account.AccountEnabled {
-					l.Debug().Interface("account", account).Msg("account is disabled")
-					w.WriteHeader(http.StatusUnauthorized)
+				} else {
+					w.WriteHeader(status)
 					return
 				}
-
-				groups := make([]string, len(account.MemberOf))
-				for i := range account.MemberOf {
-					// reva needs the unix group name
-					groups[i] = account.MemberOf[i].OnPremisesSamAccountName
-				}
-
-				l.Debug().Interface("claims", claims).Interface("account", account).Msgf("Associated claims with uuid")
-				token, err := tokenManager.MintToken(r.Context(), &revauser.User{
-					Id: &revauser.UserId{
-						OpaqueId: account.Id,
-						Idp:      claims.Iss,
-					},
-					Username:     account.OnPremisesSamAccountName,
-					DisplayName:  account.DisplayName,
-					Mail:         account.Mail,
-					MailVerified: account.ExternalUserState == "" || account.ExternalUserState == "Accepted",
-					Groups:       groups,
-				})
-
-				if err != nil {
-					l.Error().Err(err).Msgf("Could not mint token")
-					w.WriteHeader(http.StatusInternalServerError)
-					return
-				}
-
-				r.Header.Set("x-access-token", token)
 			}
+			if !account.AccountEnabled {
+				l.Debug().Interface("account", account).Msg("account is disabled")
+				w.WriteHeader(http.StatusUnauthorized)
+				return
+			}
+
+			groups := make([]string, len(account.MemberOf))
+			for i := range account.MemberOf {
+				// reva needs the unix group name
+				groups[i] = account.MemberOf[i].OnPremisesSamAccountName
+			}
+
+			l.Debug().Interface("claims", claims).Interface("account", account).Msgf("Associated claims with uuid")
+			token, err := tokenManager.MintToken(r.Context(), &revauser.User{
+				Id: &revauser.UserId{
+					OpaqueId: account.Id,
+					Idp:      claims.Iss,
+				},
+				Username:     account.OnPremisesSamAccountName,
+				DisplayName:  account.DisplayName,
+				Mail:         account.Mail,
+				MailVerified: account.ExternalUserState == "" || account.ExternalUserState == "Accepted",
+				Groups:       groups,
+			})
+
+			if err != nil {
+				l.Error().Err(err).Msgf("Could not mint token")
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+
+			l.Debug().Str("token", token).Str("account.Id", account.Id).Str("claims.Iss", claims.Iss).Msgf("minted token")
+			r.Header.Set("x-access-token", token)
 			next.ServeHTTP(w, r)
 		})
 	}
