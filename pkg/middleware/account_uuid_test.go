@@ -73,15 +73,15 @@ func TestAccountUUIDMiddlewareWithDisabledAccount(t *testing.T) {
 
 func mockAccountUUIDMiddlewareAccSvc(retErr, accEnabled bool) proto.AccountsService {
 	if retErr {
-		return &proto.MockAccountsService{
-			ListFunc: func(ctx context.Context, in *proto.ListAccountsRequest, opts ...client.CallOption) (out *proto.ListAccountsResponse, err error) {
+		return &proto.AccountsServiceMock{
+			ListAccountsFunc: func(ctx context.Context, in *proto.ListAccountsRequest, opts ...client.CallOption) (out *proto.ListAccountsResponse, err error) {
 				return nil, fmt.Errorf("error returned by mockAccountsService LIST")
 			},
 		}
 	}
 
-	return &proto.MockAccountsService{
-		ListFunc: func(ctx context.Context, in *proto.ListAccountsRequest, opts ...client.CallOption) (out *proto.ListAccountsResponse, err error) {
+	return &proto.AccountsServiceMock{
+		ListAccountsFunc: func(ctx context.Context, in *proto.ListAccountsRequest, opts ...client.CallOption) (out *proto.ListAccountsResponse, err error) {
 			return &proto.ListAccountsResponse{
 				Accounts: []*proto.Account{
 					{
